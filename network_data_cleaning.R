@@ -24,7 +24,7 @@ sum(!is.na(llm_author_distinct$id_author_oa))
 
 mean(llm_author_distinct$is_in_aps)
 
-### Field ###
+#### Field ####
 
 field_author<-llm_author%>%
   filter(task_name=="field")
@@ -57,7 +57,7 @@ write.csv(field_edges,"clean_data/field_edges.csv")
 
 visNetwork(nodes=field_nodes, edges=field_edges)
 
-### Top 5 ###
+#### Top 5 ####
 top5_author<-llm_author%>%
   filter(task_param=="top_5")
 
@@ -68,21 +68,16 @@ length(unique(top5_author$clean_name))
 top5_edges<-author_edges%>%
   filter(V1%in%top5_author$id_author_oa|V2%in%top5_author$id_author_oa)
 
-top5_nodes<-author_demographics%>%
-  filter(id_author_oa%in%top5_author$id_author_oa)%>%
+top5_unique<-top5_author%>%
+  group_by(clean_name,id_author_oa)%>%
+  summarise(count=n())%>%
+  left_join(author_demographics,by="id_author_oa")%>%
   left_join(author_stats,by="id_author_oa")%>%
   mutate(id=id_author_oa)%>%
-  relocate(id)
+  relocate(id)%>%
+  arrange(desc(count))
 
-unique(author_stats$id_author_oa[author_stats$id_author_oa%in%top5_author$id_author_oa])
+top5_unique[c("clean_name","id_author_oa","count")]
 
-nrow(top5_nodes)
-top5_nodes$id
-write.csv(top5_edges,"clean_data/top5_edges.csv")
-unique(top5_edges$from)
-unique(top5_edges$to)
-
-names(top5_edges)<-c("from","to")
-
-visNetwork(nodes=top5_nodes, edges=top5_edges)
+write.csv(top5_edges,"clean_data/top5_unique.csv")
 
