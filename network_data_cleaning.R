@@ -45,6 +45,36 @@ top5_edges <- author_edges %>%
   filter(V1 %in% top5_author$id_author_oa | V2 %in% top5_author$id_author_oa)
 
 # Create summary dataset with counts and demographic information
+top5_name_run <- top5_author %>%
+  group_by(clean_name,run_id) %>%
+  summarise(count=n())%>%
+  pivot_wider(
+    id_cols = run_id,
+    names_from = clean_name,
+    values_from = count,
+    values_fill = 0
+  )%>%
+  left_join(top5_author[c("run_id","date","time","model")])%>%
+  relocate(run_id,date,time,model)
+
+write.csv(top5_name_run, "clean_data/top5_name_run.csv")
+
+# Create summary dataset with counts and demographic information
+top5_id_run <- top5_author %>%
+  group_by(id_author_oa,run_id) %>%
+  summarise(count=n())%>%
+  pivot_wider(
+    id_cols = run_id,
+    names_from = id_author_oa,
+    values_from = count,
+    values_fill = 0
+  )%>%
+  left_join(top5_author[c("run_id","date","time","model")])%>%
+  relocate(run_id,date,time,model)
+
+write.csv(top5_id_run, "clean_data/top5_id_run.csv")
+
+# Create summary dataset with counts and demographic information
 top5_unique <- top5_author %>%
   group_by(clean_name, id_author_oa) %>%
   summarise(count=n()) %>%
@@ -72,7 +102,7 @@ llm_top5<-author_stats%>%
   inner_join(top5_unique)%>%
   arrange(desc(count))%>%
   select(id_author_oa,longest_name,llm_count=count,works_count,aps_years_of_activity,two_year_mean_citedness,h_index,aps_h_index, ethnicity,gender)
-
+  
 write.csv(llm_top5, "clean_data/llm_top5.csv")
 
 #Those returned by llm who are not in APS
