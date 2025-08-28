@@ -1,8 +1,9 @@
 # Load required libraries
-library(dplyr)     # For data manipulation
-library(tidyr)     # For data reshaping
-library(igraph)    # For network analysis
-library(visNetwork) # For interactive network visualization
+library(dplyr)     # Data manipulation
+library(tidyr)     # Data reshaping
+library(ggplot2)    # Plots creation
+library(igraph)    # Network analysis
+library(visNetwork) # Interactive network visualization
 
 # Read in data files
 author_edges <- read.table("data/ground_truth/coauthorships_edgelist.txt")
@@ -27,6 +28,58 @@ llm_author_distinct <- llm_author %>%
 nrow(llm_author_distinct)  # Number of distinct authors
 sum(!is.na(llm_author_distinct$id_author_oa))  # Count of non-NA IDs
 mean(llm_author_distinct$is_in_aps)  # Proportion of authors in APS
+
+#### Top 5 Analysis####
+
+# Filter authors by top_5 parameter
+top5_author <- llm_author %>%
+  filter(task_param=="top_5")
+
+# Basic statistics
+nrow(top5_author)  # Number of top5 authors
+length(unique(top5_author$id_author_oa))  # Unique IDs
+length(unique(top5_author$clean_name))  # Unique names
+
+# Create edges for network
+top5_edges <- author_edges %>%
+  filter(V1 %in% top5_author$id_author_oa | V2 %in% top5_author$id_author_oa)
+
+# Create summary dataset with counts and demographic information
+top5_unique <- top5_author %>%
+  group_by(clean_name, id_author_oa) %>%
+  summarise(count=n()) %>%
+  left_join(author_demographics, by="id_author_oa") %>%
+  left_join(author_stats, by="id_author_oa") %>%
+  mutate(id = id_author_oa) %>%
+  relocate(id) %>%
+  arrange(desc(count))  # Sort by frequency
+
+# Display selected columns
+top5_unique[c("clean_name", "id_author_oa", "count")]
+
+# The invisibles
+top1500_h_index<-author_stats%>%
+  arrange(desc(aps_h_index))%>%
+  left_join(author_demographics)%>%
+  top_n(h_index, n=1500)%>%
+  select(id_author_oa,longest_name,works_count,aps_years_of_activity,two_year_mean_citedness,h_index,aps_h_index, ethnicity,gender)
+
+write.csv(top1500_h_index, "clean_data/top1500_h_index.csv")
+
+# The visible (by llm)
+llm_top5<-author_stats%>%
+  left_join(author_demographics)%>%
+  inner_join(top5_unique)%>%
+  arrange(desc(count))%>%
+  select(id_author_oa,longest_name,llm_count=count,works_count,aps_years_of_activity,two_year_mean_citedness,h_index,aps_h_index, ethnicity,gender)
+
+write.csv(llm_top5, "clean_data/llm_top5.csv")
+
+#Those returned by llm who are not in APS
+top5_unique$clean_name[is.na(top5_unique$id_author_oa)]
+
+# Save edges to CSV
+write.csv(top5_edges, "clean_data/top5_unique.csv")
 
 #### Field Analysis ####
 
@@ -71,33 +124,7 @@ write.csv(field_edges, "clean_data/field_edges.csv")
 # Create interactive network visualization
 visNetwork(nodes=field_nodes, edges=field_edges)
 
-#### Top 5 Analysis####
 
-# Filter authors by top_5 parameter
-top5_author <- llm_author %>%
-  filter(task_param=="top_5")
+#### Field network ####
+head(author_stats)
 
-# Basic statistics
-nrow(top5_author)  # Number of top5 authors
-length(unique(top5_author$id_author_oa))  # Unique IDs
-length(unique(top5_author$clean_name))  # Unique names
-
-# Create edges for network
-top5_edges <- author_edges %>%
-  filter(V1 %in% top5_author$id_author_oa | V2 %in% top5_author$id_author_oa)
-
-# Create summary dataset with counts and demographic information
-top5_unique <- top5_author %>%
-  group_by(clean_name, id_author_oa) %>%
-  summarise(count=n()) %>%
-  left_join(author_demographics, by="id_author_oa") %>%
-  left_join(author_stats, by="id_author_oa") %>%
-  mutate(id = id_author_oa) %>%
-  relocate(id) %>%
-  arrange(desc(count))  # Sort by frequency
-
-# Display selected columns
-top5_unique[c("clean_name", "id_author_oa", "count")]
-
-# Save edges to CSV
-write.csv(top5_edges, "clean_data/top5_unique.csv")
