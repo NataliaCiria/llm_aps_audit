@@ -138,6 +138,9 @@ field_edges <- author_edges %>%
 
 nrow(unique(field_edges))  # Count unique edges
 
+# Save edges to CSV
+write.csv(field_edges, "clean_data/field_edges.csv")
+
 # Create nodes for network visualization
 field_nodes <- author_demographics %>%
   filter(id_author_oa %in% field_author$id_author_oa) %>%
@@ -149,11 +152,11 @@ field_nodes <- author_demographics %>%
 nrow(field_nodes)  # Count nodes
 
 # Save edges to CSV
-write.csv(field_edges, "clean_data/field_edges.csv")
+write.csv(field_nodes, "clean_data/field_nodes.csv")
+
 
 # Create interactive network visualization
 visNetwork(nodes=field_nodes, edges=field_edges)
-
 
 #### Field network ####
 head(author_stats)
